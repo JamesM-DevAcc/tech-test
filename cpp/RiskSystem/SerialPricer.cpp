@@ -1,17 +1,64 @@
 #include "SerialPricer.h"
 #include <stdexcept>
 
-SerialPricer::~SerialPricer() {
+#include "../Pricers/GovBondPricingEngine.h"
+#include "../Pricers/CorpBondPricingEngine.h"
+#include "../Pricers/FxPricingEngine.h"
 
+namespace {
+    std::string getEngineKey(const std::string& typeName)
+    {
+        const std::size_t pos = typeName.find_last_of('.');
+        if (pos == std::string::npos) { return typeName; }
+        return typeName.substr(pos + 1);
+    }
 }
 
-void SerialPricer::loadPricers() {
-    PricingConfigLoader pricingConfigLoader;
-    pricingConfigLoader.setConfigFile("./PricingConfig/PricingEngines.xml");
-    PricingEngineConfig pricerConfig = pricingConfigLoader.loadConfig();
-    
-    for (const auto& configItem : pricerConfig) {
-        throw std::runtime_error("Not implemented");
+SerialPricer::~SerialPricer() {
+    for (auto& kv : pricers_) {
+        delete kv.second;
+    }
+    pricers_.clear();
+}
+
+void SerialPricer::loadPricers()
+{
+    if (!pricers_.empty()) {
+        return;
+    }
+
+    PricingConfigLoader loader;
+    loader.setConfigFile("./PricingConfig/PricingEngines.xml");
+    const PricingEngineConfig cfg = loader.loadConfig();
+
+    for (const auto& item : cfg) {
+        const std::string tradeType = item.getTradeType();
+        const std::string typeName  = item.getTypeName();
+
+        if (tradeType.empty())
+            throw std::invalid_argument("Trade type not specified in config");
+
+        if (typeName.empty())
+            throw std::invalid_argument("Pricing engine type not specified for trade type: " + tradeType);
+
+        const std::string engineId = getEngineKey(typeName);
+
+        IPricingEngine* engine;
+        if (engineId == "GovBondPricingEngine") {
+            engine = new GovBondPricingEngine();
+        } else if (engineId == "CorpBondPricingEngine") {
+            engine = new CorpBondPricingEngine();
+        } else if (engineId == "FxPricingEngine") {
+            engine = new FxPricingEngine();
+        } else {
+            throw std::runtime_error("Unknown pricing engine type: " + typeName);
+        }
+
+        auto [it, inserted] = pricers_.emplace(tradeType, engine);
+        if (!inserted) {
+            delete engine;
+            throw std::runtime_error("Duplicate pricer mapping for trade type: " + tradeType);
+        }
     }
 }
 
