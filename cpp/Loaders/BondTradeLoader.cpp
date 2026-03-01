@@ -5,6 +5,7 @@
 #include <ctime>
 #include <iomanip>
 #include <chrono>
+#include <iostream>
 
 BondTrade* BondTradeLoader::createTradeFromLine(std::string line) {
     std::vector<std::string> items;
@@ -18,8 +19,22 @@ BondTrade* BondTradeLoader::createTradeFromLine(std::string line) {
     if (items.size() < 7) {
         throw std::runtime_error("Invalid line format");
     }
+
+    std::string tradeType;
+    if (items[0] == BondTrade::GovBondTradeType) {
+        tradeType = BondTrade::GovBondTradeType;
+    } else if (items[0] == BondTrade::CorpBondTradeType) {
+        tradeType = BondTrade::CorpBondTradeType;
+    } else {
+#ifndef NDEBUG
+        std::cerr << "WARNING: Unknown bond type '" << items[0]
+                  << "' for trade '" << items[6]
+                  << "'. Defaulting to CorpBondTradeType.\n";
+#endif
+        tradeType = BondTrade::CorpBondTradeType;
+    }
     
-    BondTrade* trade = new BondTrade(items[6]);
+    BondTrade* trade = new BondTrade(items[6], tradeType);
     
     std::tm tm = {};
     std::istringstream dateStream(items[1]);
