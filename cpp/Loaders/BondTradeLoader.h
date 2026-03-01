@@ -18,6 +18,8 @@ private:
     
 public:
     std::vector<ITrade*> loadTrades() override;
+    void streamTrades(const TradeCallback& onTrade) override;
+
     std::string getDataFile() const override;
     void setDataFile(const std::string& file) override;
 };

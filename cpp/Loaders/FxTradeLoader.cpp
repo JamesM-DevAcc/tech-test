@@ -1,4 +1,5 @@
 #include "FxTradeLoader.h"
+
 #include <stdexcept>
 #include <chrono>
 #include <ctime>
@@ -6,6 +7,8 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace {
     const std::string seperator = u8"¬";
@@ -37,49 +40,52 @@ namespace {
 
     FxTrade* createTradeFromLine(const std::string& line) {
         auto items = splitByString(line, seperator);
-            if (items.size() != 9) {
-                throw std::runtime_error("Invalid number of fields in trade data");
-            }
+        if (items.size() != 9) {
+            throw std::runtime_error("Invalid number of fields in trade data");
+        }
 
-            FxTrade* trade;
+        FxTrade* trade;
 
-            if (items[0] == FxTrade::FxSpotTradeType) {
-                trade = new FxTrade(items[8], FxTrade::FxSpotTradeType);
-            } else if (items[0] == FxTrade::FxForwardTradeType) {
-                trade = new FxTrade(items[8], FxTrade::FxForwardTradeType);
-            } else {
+        if (items[0] == FxTrade::FxSpotTradeType) {
+            trade = new FxTrade(items[8], FxTrade::FxSpotTradeType);
+        } else if (items[0] == FxTrade::FxForwardTradeType) {
+            trade = new FxTrade(items[8], FxTrade::FxForwardTradeType);
+        } else {
 #ifndef NDEBUG
                 std::cerr << "WARNING: Unknown FX type '" << items[0]
                         << "' for trade '" << items[8]
-                        << "'. Defaulting to FxFwd.\n";
+                        << "'. Defaulting to FxForwardTradeType.\n";
 #endif
                 trade = new FxTrade(items[8], FxTrade::FxForwardTradeType);
             }
 
-            trade->setTradeDate(parseDateYmd(items[1]));
-            trade->setInstrument(items[2] + items[3]);     // Ccy1 + Ccy2
-            trade->setCounterparty(items[7]);
-            trade->setNotional(std::stod(items[4]));
-            trade->setRate(std::stod(items[5]));
-            trade->setValueDate(parseDateYmd(items[6]));
+        trade->setTradeDate(parseDateYmd(items[1]));
+        trade->setInstrument(items[2] + items[3]);     // Ccy1 + Ccy2
+        trade->setCounterparty(items[7]);
+        trade->setNotional(std::stod(items[4]));
+        trade->setRate(std::stod(items[5]));
+        trade->setValueDate(parseDateYmd(items[6]));
 
-            return trade;
+        return trade;
     }
 }
 
-std::vector<ITrade*> FxTradeLoader::loadTrades() {
+void FxTradeLoader::streamTrades(const TradeCallback& onTrade) {
+    if (!onTrade) {
+        throw std::invalid_argument("onTrade callback cannot be null");
+    }
+
     std::ifstream stream(dataFile_);
-    if(!stream.is_open()){
+    if (!stream.is_open()) {
         throw std::runtime_error("Cannot open file: " + dataFile_);
     }
 
-    std::vector<ITrade*> result;
     int lineCount = 0;
     std::string line;
 
-    while(std::getline(stream, line)) {
+    while (std::getline(stream, line)) {
         // First 2 lines are headers in the FxTrades.dat
-        if(lineCount < 2) {
+        if (lineCount < 2) {
             ++lineCount;
             continue;
         }
@@ -88,16 +94,20 @@ std::vector<ITrade*> FxTradeLoader::loadTrades() {
         if (line.rfind("END", 0) == 0) {
             break;
         }
-        
+
         try {
-            result.push_back(createTradeFromLine(line));
-        } catch (const std::exception& e){
+            onTrade(createTradeFromLine(line)); // caller owns trade
+        } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;
         }
 
         ++lineCount;
     }
+}
 
+std::vector<ITrade*> FxTradeLoader::loadTrades() {
+    std::vector<ITrade*> result;
+    streamTrades([&](ITrade* trade) { result.push_back(trade); });
     return result;
 }
 
@@ -106,7 +116,7 @@ std::string FxTradeLoader::getDataFile() const {
 }
 
 void FxTradeLoader::setDataFile(const std::string& file) {
-    if(file.empty()) {
+    if (file.empty()) {
         throw std::invalid_argument("Filename cannot be null");
     }
 
