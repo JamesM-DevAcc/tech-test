@@ -1,7 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<PricingEngines>
-  <Engine tradeType="GovBond" assembly="HmxLabs.TechTest.Pricers" pricingEngine="HmxLabs.TechTest.Pricers.GovBondPricingEngine" />
-  <Engine tradeType="CorpBond" assembly="HmxLabs.TechTest.Pricers" pricingEngine="HmxLabs.TechTest.Pricers.CorpBondPricingEngine" />
-  <Engine tradeType="FxSpot" assembly="HmxLabs.TechTest.Pricers" pricingEngine="HmxLabs.TechTest.Pricers.FxPricingEngine" />
-  <Engine tradeType="FxFwd" assembly="HmxLabs.TechTest.Pricers" pricingEngine="HmxLabs.TechTest.Pricers.FxPricingEngine" />
-</PricingEngines>
