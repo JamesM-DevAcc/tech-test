@@ -3,22 +3,21 @@
 
 #include "IScalarResultReceiver.h"
 #include "ScalarResult.h"
+
+#include <iterator>
 #include <map>
-#include <vector>
 #include <optional>
 #include <string>
-#include <iterator>
 
 class ScalarResults : public IScalarResultReceiver {
 public:
-    virtual ~ScalarResults();
-    std::optional<ScalarResult> operator[](const std::string& tradeId) const;
+    ~ScalarResults() override;
 
+    std::optional<ScalarResult> operator[](const std::string& tradeId) const;
     bool containsTrade(const std::string& tradeId) const;
 
-    virtual void addResult(const std::string& tradeId, double result) override;
-
-    virtual void addError(const std::string& tradeId, const std::string& error) override;
+    void addResult(const std::string& tradeId, double result) override;
+    void addError(const std::string& tradeId, const std::string& error) override;
 
     class Iterator {
     public:
@@ -30,10 +29,22 @@ public:
 
         Iterator() = default;
 
-        // Iterator must be constructable from ScalarResults parent
+        // Constructable from ScalarResults parent (needed for begin/end)
+        Iterator(const ScalarResults* parent,
+                 std::map<std::string, double>::const_iterator resultsIt,
+                 std::map<std::string, std::string>::const_iterator errorsIt);
+
         Iterator& operator++();
         ScalarResult operator*() const;
         bool operator!=(const Iterator& other) const;
+
+    private:
+        void updateCurrentTradeId();
+
+        const ScalarResults* parent_ = nullptr;
+        std::map<std::string, double>::const_iterator resultsIt_{};
+        std::map<std::string, std::string>::const_iterator errorsIt_{};
+        std::string currentTradeId_;
     };
 
     Iterator begin() const;
