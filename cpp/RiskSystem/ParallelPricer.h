@@ -5,24 +5,24 @@
 #include "../Models/ITrade.h"
 #include "../Models/IScalarResultReceiver.h"
 #include "PricingConfigLoader.h"
+
 #include <map>
-#include <vector>
+#include <mutex>
 #include <string>
 #include <thread>
-#include <mutex>
-#include <future>
+#include <vector>
 
 class ParallelPricer {
 private:
-    std::map<std::string, IPricingEngine*> pricers_;
+    std::map<std::string, std::string> pricerTypeNamesByTradeType_;
     std::mutex resultMutex_;
-    
+
     void loadPricers();
-    
+
 public:
     ~ParallelPricer();
-    
-    void price(const std::vector<std::vector<ITrade*>>& tradeContainers, 
+
+    void price(const std::vector<std::vector<ITrade*>>& tradeContainers,
                IScalarResultReceiver* resultReceiver);
 };
 

@@ -28,16 +28,40 @@ int _getch() {
 #endif
 
 int main(int argc, char* argv[]) {
+
+    int parallel = 0;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (arg == "parallel=enabled")  parallel = 1;
+        if (arg == "parallel=disabled") parallel = 0;
+    }
+
+    std::cout << (parallel ? "Parallel Pricer in use" : "Serial Pricer in use") << "\n";
+
     SerialTradeLoader tradeLoader;
     auto allTrades = tradeLoader.loadTrades();
     
     ScalarResults results;
-    SerialPricer pricer;
-    pricer.price(allTrades, &results);
+
+    switch(parallel) {
+        case 1: {
+            ParallelPricer pricer;
+            pricer.price(allTrades, &results);
+            break;
+        }
+        case 0:
+        default: {
+            SerialPricer pricer;
+            pricer.price(allTrades, &results);
+            break;
+        }
+    }
     
     ScreenResultPrinter screenPrinter;
     screenPrinter.printResults(results);
-    
+
     std::cout << "Press any key to exit.." << std::endl;
     _getch();
     
